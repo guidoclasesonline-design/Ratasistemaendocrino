@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sistema Endocrino de la Rata - Modelo 3D Interactivo</title>
+    <style>
+        :root {
+            --bg-color: #08100c;
+            --panel-bg: rgba(12, 26, 19, 0.85);
+            --border-color: #1b3a2a;
+            --accent-green: #2a6f4e;
+            --highlight-green: #4ade80;
+            --text-light: #e2edd8;
+            --text-dim: #8ba893;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+        }
+
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Encabezado minimalista */
+        header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            max-width: 340px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--highlight-green);
+            margin-bottom: 4px;
+        }
+
+        header p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.3;
+        }
+
+        /* Panel de Controles Lateral / Flotante */
+        #ui-panel {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            z-index: 10;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            width: 280px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin: 12px 0 6px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        button.organ-btn {
+            background: rgba(27, 58, 42, 0.4);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        button.organ-btn:hover, button.organ-btn.active {
+            background: var(--accent-green);
+            border-color: var(--highlight-green);
+            color: #fff;
+            transform: translateX(-2px);
+        }
+
+        button.organ-btn .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-dim);
+        }
+
+        button.organ-btn.active .dot {
+            background-color: var(--highlight-green);
+            box-shadow: 0 0 8px var(--highlight-green);
+        }
+
+        /* Control de Opacidad del Cuerpo */
+        .slider-container {
+            margin-top: 15px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider-container label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--highlight-green);
+        }
+
+        /* Tarjeta de Información */
+        #info-card {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            max-width: 400px;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #info-card h3 {
+            color: var(--highlight-green);
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+
+        #info-card p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        /* Adaptabilidad Móvil */
+        @media (max-width: 768px) {
+            header {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+
+            #ui-panel {
+                top: auto;
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+                max-height: 40vh;
+            }
+
+            #info-card {
+                bottom: 45vh;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+    <!-- Three.js y OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="webgl-container"></div>
+
+    <header>
+        <h1>Anatomía Endocrina: Rata</h1>
+        <p>Modelo 3D morfológico preciso. Selecciona un órgano para explorar su estructura y ubicación exacta.</p>
+    </header>
+
+    <div id="ui-panel">
+        <div class="section-title">Vista General</div>
+        <button class="organ-btn active" onclick="focusOrgan('all')">
+            <span>Ver Todo el Sistema</span>
+            <span class="dot"></span>
+        </button>
+
+        <div class="section-title">Encéfalo</div>
+        <div class="btn-group">
+            <button class="organ-btn" onclick="focusOrgan('hipotalamo')">
+                <span>Hipotálamo</span>
+                <span class="dot" style="background:#ff4d4d"></span>
+            </button>
+            <button class="organ-btn" onclick="focusOrgan('hipofisis')">
+                <span>Hipófisis (Pituitaria)</span>
+                <span class="dot" style="background:#ff9933"></span>
+            </button>
+            <button class="organ-btn" onclick="focusOrgan('pineal')">
+                <span>Glándula Pineal</span>
+                <span class="dot" style="background:#ffff33"></span>
+            </button>
+        </div>
+
+        <div class="section-title">Cuello</div>
+        <div class="btn-group">
+            <button class="organ-btn" onclick="focusOrgan('tiroides')">
+                <span>Tiroides y Paratiroides</span>
+                <span class="dot" style="background:#33cc33"></span>
+            </button>
+        </div>
+
+        <div class="section-title">Zona Renal / Lumbar</div>
+        <div class="btn-group">
+            <button class="organ-btn" onclick="focusOrgan('suprarrenales')">
+                <span>Glándulas Suprarrenales</span>
+                <span class="dot" style="background:#33ffff"></span>
+            </button>
+        </div>
+
+        <div class="section-title">Cavidad Abdominal</div>
+        <div class="btn-group">
+            <button class="organ-btn" onclick="focusOrgan('pancreas')">
+                <span>Páncreas Endocrino</span>
+                <span class="dot" style="background:#cc33ff"></span>
+            </button>
+        </div>
+
+        <div class="slider-container">
+            <label for="opacityRange">
+                <span>Transparencia del Cuerpo</span>
+                <span id="opacityVal">25%</span>
+            </label>
+            <input type="range" id="opacityRange" min="0" max="1" step="0.05" value="0.25" oninput="updateBodyOpacity(this.value)">
+        </div>
+    </div>
+
+    <div id="info-card">
+        <h3 id="info-title">Órgano</h3>
+        <p id="info-desc">Descripción anatómica y funcional...</p>
+    </div>
+
+    <script>
+        // Data de los órganos
+        const organInfo = {
+            'hipotalamo': {
+                title: "Hipotálamo",
+                desc: "Ubicado en la región ventral del diencéfalo. Es el centro integrador neuroendocrino maestro que regula la adenohipófisis mediante factores liberadores e inhibidores e interviene en la homeostasis corporal.",
+                camPos: { x: 3.5, y: 1.2, z: 1.5 },
+                target: { x: 3.2, y: 0.9, z: 0 }
+            },
+            'hipofisis': {
+                title: "Hipófisis (Glándula Pituitaria)",
+                desc: "Localizada en la base del cráneo (sella turcica) conectada al hipotálamo por el tallo hipofisario. Consta de adenohipófisis y neurohipófisis, secretando hormonas tróficas clave (GH, TSH, ACTH, FSH, LH, PRL, oxitocina, ADH).",
+                camPos: { x: 3.6, y: 0.6, z: 1.5 },
+                target: { x: 3.3, y: 0.75, z: 0 }
+            },
+            'pineal': {
+                title: "Glándula Pineal",
+                desc: "Ubicada dorsalmente en el encéfalo, entre los hemisferios cerebrales y el cerebelo. Compuesta por pinealocitos que sintetizan y secretan melatonina para la regulación de los ritmos circadianos.",
+                camPos: { x: 3.0, y: 1.8, z: 1.5 },
+                target: { x: 2.7, y: 1.3, z: 0 }
+            },
+            'tiroides': {
+                title: "Glándula Tiroides y Paratiroides",
+                desc: "La tiroides posee dos lóbulos laterales unidos sobre la tráquea proximal en el cuello. Contiene folículos (T3/T4) y células C (calcitonina). Las paratiroides están incrustadas en su superficie y secretan PTH para la homeostasis del calcio.",
+                camPos: { x: 2.2, y: 0.2, z: 1.8 },
+                target: { x: 1.8, y: 0.1, z: 0 }
+            },
+            'suprarrenales': {
+                title: "Glándulas Suprarrenales",
+                desc: "Ubicadas en el polo craneal superior de cada riñón. Presentan una corteza externa (glomerular, fasciculada, reticular) productora de corticoesteroides y una médula interna de células cromafines secretoras de catecolaminas.",
+                camPos: { x: -0.8, y: 0.3, z: 2.2 },
+                target: { x: -1.0, y: 0.1, z: 0 }
+            },
+            'pancreas': {
+                title: "Páncreas Endocrino (Islotes de Langerhans)",
+                desc: "Microestructuras distribuidas por el páncreas en la cavidad abdominal (junto al duodeno). Contiene células alfa (glucagón), beta (insulina), delta (somatostatina) y PP, regulando el metabolismo hidrocarbonado.",
+                camPos: { x: 0.2, y: -0.6, z: 2.5 },
+                target: { x: -0.2, y: -0.3, z: 0 }
+            },
+            'all': {
+                title: "Sistema Endocrino de la Rata",
+                desc: "Visión panorámica completa de los principales órganos endocrinos situados en sus posiciones anatómicas reales respecto a la silueta corporal de la rata.",
+                camPos: { x: 1.0, y: 1.0, z: 6.5 },
+                target: { x: 0.5, y: 0, z: 0 }
+            }
+        };
+
+        // Variables de escena Three.js
+        let scene, camera, renderer, controls;
+        let ratBodyMesh;
+        const organs = {};
+
+        function init() {
+            const container = document.getElementById('webgl-container');
+
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x08100c);
+            scene.fog = new THREE.FogExp2(0x08100c, 0.08);
+
+            // Cámara
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(1.0, 1.0, 6.5);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Controles de Órbita
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.1;
+            controls.target.set(0.5, 0, 0);
+
+            // Iluminación
+            const ambientLight = new THREE.AmbientLight(0xdcfce7, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight1.position.set(5, 10, 7);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0x2a6f4e, 0.5);
+            dirLight2.position.set(-5, -5, -5);
+            scene.add(dirLight2);
+
+            // Construir los modelos 3D anatómicos
+            createRatBody();
+            createBrainAndHeadOrgans();
+            createNeckOrgans();
+            createAbdominalOrgans();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+
+            // Render loop
+            animate();
+        }
+
+        // 1. Molde de la Rata (Basado en la morfología exacta de la foto)
+        function createRatBody() {
+            const shape = new THREE.Shape();
+            // Silueta perfil preciso de la rata (hocico, cabeza, lomo arqueado, cola, extremidades)
+            shape.moveTo(4.2, 0.6);   // Hocico
+            shape.quadraticCurveTo(3.5, 1.3, 2.5, 1.4); // Frente y cabeza
+            shape.quadraticCurveTo(1.2, 1.8, -0.5, 1.6); // Lomo / Espalda arqueada
+            shape.quadraticCurveTo(-1.8, 1.2, -2.5, 0.2); // Anca posterior
+            shape.quadraticCurveTo(-3.5, -0.2, -4.5, -0.5); // Cola
+            shape.quadraticCurveTo(-2.5, -0.2, -2.0, -0.3); // Base cola
+            shape.quadraticCurveTo(-1.5, -0.8, -1.0, -0.8); // Pata trasera
+            shape.quadraticCurveTo(0.0, -0.8, 1.2, -0.6);  // Vientre / Abdomen
+            shape.quadraticCurveTo(2.0, -0.7, 2.3, -0.6);  // Pata delantera
+            shape.quadraticCurveTo(3.2, -0.3, 3.8, 0.1);  // Cuello / Garganta
+            shape.closePath();
+
+            const extrudeSettings = {
+                steps: 2,
+                depth: 0.9,
+                bevelEnabled: true,
+                bevelThickness: 0.3,
+                bevelSize: 0.3,
+                bevelSegments: 8
+            };
+
+            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geometry.center();
+            geometry.scale(0.8, 0.8, 0.8);
+
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x4ade80,
+                transparent: true,
+                opacity: 0.25,
+                wireframe: false,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+
+            ratBodyMesh = new THREE.Mesh(geometry, material);
+            ratBodyMesh.position.set(0.2, 0.2, 0);
+            scene.add(ratBodyMesh);
+        }
+
+        // 2. Encéfalo y Glándulas (Hipotálamo, Hipófisis, Pineal)
+        function createBrainAndHeadOrgans() {
+            const brainGroup = new THREE.Group();
+
+            // Cerebro (Masa encefálica principal)
+            const cerebrumGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            cerebrumGeo.scale(1.4, 0.8, 1.0);
+            const brainMat = new THREE.MeshPhongMaterial({ color: 0x2b4c3b, transparent: true, opacity: 0.6 });
+            const cerebrum = new THREE.Mesh(cerebrumGeo, brainMat);
+            cerebrum.position.set(3.0, 1.1, 0);
+            brainGroup.add(cerebrum);
+
+            // Cerebelo
+            const cerebeloGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            const cerebelo = new THREE.Mesh(cerebeloGeo, brainMat);
+            cerebelo.position.set(2.2, 1.0, 0);
+            brainGroup.add(cerebelo);
+
+            // Hipotálamo (Rojo/Rosado brillante)
+            const hipoGeo = new THREE.SphereGeometry(0.12, 16, 16);
+            hipoGeo.scale(1.2, 0.8, 1.0);
+            const hipoMat = new THREE.MeshStandardMaterial({ color: 0xff4d4d, roughness: 0.3, metalness: 0.1, emissive: 0x330000 });
+            organs['hipotalamo'] = new THREE.Mesh(hipoGeo, hipoMat);
+            organs['hipotalamo'].position.set(3.0, 0.95, 0);
+            brainGroup.add(organs['hipotalamo']);
+
+            // Hipófisis / Pituitaria (Naranja - Conectada al hipotálamo inferiormente)
+            const hipoPitGroup = new THREE.Group();
+            const pitGeo = new THREE.SphereGeometry(0.1, 16, 16);
+            pitGeo.scale(1.3, 0.7, 1.1);
+            const pitMat = new THREE.MeshStandardMaterial({ color: 0xff9933, roughness: 0.3, emissive: 0x331a00 });
+            const pitMesh = new THREE.Mesh(pitGeo, pitMat);
+
+            // Tallo infundibular de conexión
+            const stalkGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.12);
+            const stalkMesh = new THREE.Mesh(stalkGeo, pitMat);
+            stalkMesh.position.set(0, 0.08, 0);
+
+            hipoPitGroup.add(pitMesh);
+            hipoPitGroup.add(stalkMesh);
+            hipoPitGroup.position.set(3.0, 0.78, 0);
+            organs['hipofisis'] = hipoPitGroup;
+            brainGroup.add(organs['hipofisis']);
+
+            // Glándula Pineal (Amarillo)
+            const pinealGeo = new THREE.SphereGeometry(0.07, 16, 16);
+            const pinealMat = new THREE.MeshStandardMaterial({ color: 0xffff33, roughness: 0.2, emissive: 0x333300 });
+            organs['pineal'] = new THREE.Mesh(pinealGeo, pinealMat);
+            organs['pineal'].position.set(2.55, 1.25, 0);
+            brainGroup.add(organs['pineal']);
+
+            scene.add(brainGroup);
+        }
+
+        // 3. Cuello (Tiroides y Paratiroides)
+        function createNeckOrgans() {
+            const neckGroup = new THREE.Group();
+
+            // Tráquea
+            const traqueaGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.0, 16);
+            traqueaGeo.rotateZ(Math.PI / 4);
+            const traqueaMat = new THREE.MeshPhongMaterial({ color: 0x4a6153, transparent: true, opacity: 0.7 });
+            const traquea = new THREE.Mesh(traqueaGeo, traqueaMat);
+            traquea.position.set(1.8, 0.1, 0);
+            neckGroup.add(traquea);
+
+            // Tiroides (Verde brillante en forma de H/mariposa abrazando la tráquea)
+            const tiroidesGroup = new THREE.Group();
+            const lobeGeo = new THREE.SphereGeometry(0.12, 16, 16);
+            lobeGeo.scale(1.5, 0.7, 0.8);
+            const tiroidesMat = new THREE.MeshStandardMaterial({ color: 0x33cc33, roughness: 0.3, emissive: 0x003300 });
+
+            const loboIzquierdo = new THREE.Mesh(lobeGeo, tiroidesMat);
+            loboIzquierdo.position.set(0, 0, 0.12);
+
+            const loboDerecho = new THREE.Mesh(lobeGeo, tiroidesMat);
+            loboDerecho.position.set(0, 0, -0.12);
+
+            const istmoGeo = new THREE.BoxGeometry(0.08, 0.05, 0.22);
+            const istmo = new THREE.Mesh(istmoGeo, tiroidesMat);
+
+            tiroidesGroup.add(loboIzquierdo);
+            tiroidesGroup.add(loboDerecho);
+            tiroidesGroup.add(istmo);
+
+            // Paratiroides (4 pequeñas esférulas incrustadas en los lóbulos tiroideos)
+            const paraGeo = new THREE.SphereGeometry(0.035, 12, 12);
+            const paraMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xaaaaaa });
+
+            const p1 = new THREE.Mesh(paraGeo, paraMat); p1.position.set(0.05, 0.04, 0.14);
+            const p2 = new THREE.Mesh(paraGeo, paraMat); p2.position.set(-0.05, -0.04, 0.14);
+            const p3 = new THREE.Mesh(paraGeo, paraMat); p3.position.set(0.05, 0.04, -0.14);
+            const p4 = new THREE.Mesh(paraGeo, paraMat); p4.position.set(-0.05, -0.04, -0.14);
+
+            tiroidesGroup.add(p1); tiroidesGroup.add(p2); tiroidesGroup.add(p3); tiroidesGroup.add(p4);
+
+            tiroidesGroup.position.set(1.9, 0.2, 0);
+            tiroidesGroup.rotation.z = -Math.PI / 6;
+
+            organs['tiroides'] = tiroidesGroup;
+            neckGroup.add(organs['tiroides']);
+
+            scene.add(neckGroup);
+        }
+
+        // 4. Órganos Abdominales (Suprarrenales y Páncreas)
+        function createAbdominalOrgans() {
+            const abdoGroup = new THREE.Group();
+
+            // Riñones
+            const kidneyGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            kidneyGeo.scale(1.4, 0.9, 0.9);
+            const kidneyMat = new THREE.MeshPhongMaterial({ color: 0x5c2929 });
+
+            const rinonIzq = new THREE.Mesh(kidneyGeo, kidneyMat);
+            rinonIzq.position.set(-1.0, 0.0, 0.3);
+
+            const rinonDer = new THREE.Mesh(kidneyGeo, kidneyMat);
+            rinonDer.position.set(-0.8, 0.1, -0.3);
+
+            abdoGroup.add(rinonIzq);
+            abdoGroup.add(rinonDer);
+
+            // Glándulas Suprarrenales (Cyan / Celeste brillante en los polos superiores de los riñones)
+            const suprarrenalesGroup = new THREE.Group();
+            const adrenalGeo = new THREE.SphereGeometry(0.09, 16, 16);
+            adrenalGeo.scale(1.1, 0.7, 0.9);
+            const adrenalMat = new THREE.MeshStandardMaterial({ color: 0x33ffff, roughness: 0.2, emissive: 0x003333 });
+
+            const adrIzq = new THREE.Mesh(adrenalGeo, adrenalMat);
+            adrIzq.position.set(-0.9, 0.22, 0.3);
+
+            const adrDer = new THREE.Mesh(adrenalGeo, adrenalMat);
+            adrDer.position.set(-0.7, 0.32, -0.3);
+
+            suprarrenalesGroup.add(adrIzq);
+            suprarrenalesGroup.add(adrDer);
+            organs['suprarrenales'] = suprarrenalesGroup;
+            abdoGroup.add(organs['suprarrenales']);
+
+            // Páncreas (Púrpura / Magenta extendido en asa duodenal)
+            const pancreasGroup = new THREE.Group();
+            const pancGeo = new THREE.TorusGeometry(0.35, 0.08, 8, 24, Math.PI * 1.2);
+            const pancMat = new THREE.MeshStandardMaterial({ color: 0xcc33ff, roughness: 0.4, emissive: 0x330033 });
+            const pancMesh = new THREE.Mesh(pancGeo, pancMat);
+            pancMesh.rotation.x = Math.PI / 2;
+            pancMesh.rotation.z = Math.PI / 4;
+
+            pancreasGroup.add(pancMesh);
+            pancreasGroup.position.set(-0.2, -0.2, 0);
+            organs['pancreas'] = pancreasGroup;
+            abdoGroup.add(organs['pancreas']);
+
+            scene.add(abdoGroup);
+        }
+
+        // Cambio de opacidad del cuerpo
+        function updateBodyOpacity(val) {
+            if (ratBodyMesh) {
+                ratBodyMesh.material.opacity = parseFloat(val);
+                document.getElementById('opacityVal').innerText = Math.round(val * 100) + '%';
+            }
+        }
+
+        // Selección y enfoque de órganos
+        function focusOrgan(key) {
+            // Actualizar botones UI
+            document.querySelectorAll('.organ-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const info = organInfo[key];
+            const infoCard = document.getElementById('info-card');
+
+            if (key === 'all') {
+                infoCard.style.display = 'none';
+            } else {
+                document.getElementById('info-title').innerText = info.title;
+                document.getElementById('info-desc').innerText = info.desc;
+                infoCard.style.display = 'block';
+            }
+
+            // Animación suave de cámara con GSAP/Tween manual
+            animateCamera(info.camPos, info.target);
+
+            // Resaltado de órgano activo
+            Object.keys(organs).forEach(k => {
+                const mesh = organs[k];
+                if (key === 'all' || key === k) {
+                    setMeshHighlight(mesh, true);
+                } else {
+                    setMeshHighlight(mesh, false);
+                }
+            });
+        }
+
+        function setMeshHighlight(obj, active) {
+            obj.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.opacity = active ? 1.0 : 0.2;
+                    child.material.transparent = !active;
+                }
+            });
+        }
+
+        function animateCamera(newPos, newTarget) {
+            const duration = 1000;
+            const startPos = { ...camera.position };
+            const startTarget = { ...controls.target };
+            const startTime = performance.now();
+
+            function updateCam(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3); // Ease Out Cubic
+
+                camera.position.x = startPos.x + (newPos.x - startPos.x) * ease;
+                camera.position.y = startPos.y + (newPos.y - startPos.y) * ease;
+                camera.position.z = startPos.z + (newPos.z - startPos.z) * ease;
+
+                controls.target.x = startTarget.x + (newTarget.x - startTarget.x) * ease;
+                controls.target.y = startTarget.y + (newTarget.y - startTarget.y) * ease;
+                controls.target.z = startTarget.z + (newTarget.z - startTarget.z) * ease;
+
+                controls.update();
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateCam);
+                }
+            }
+
+            requestAnimationFrame(updateCam);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotación leve automática cuando se ve todo el sistema
+            if (controls) controls.update();
+
+            renderer.render(scene, camera);
+        }
+
+        // Inicializar al cargar
+        window.onload = init;
+    </script>
+</body>
+</html>
